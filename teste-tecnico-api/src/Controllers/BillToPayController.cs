@@ -36,7 +36,7 @@ namespace teste_tecnico_api.src.Controllers
             }
             catch (Exception e)
             {
-                return StatusCode(500, new { Message = $"Erro: {e.Message}" });
+                return StatusCode(500, new { Message = $"{e.Message}" });
             }
         }
     }

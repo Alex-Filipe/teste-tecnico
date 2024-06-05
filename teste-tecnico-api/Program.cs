@@ -3,6 +3,7 @@ using teste_tecnico_api.src.Database;
 using teste_tecnico_api.src.Interfaces;
 using teste_tecnico_api.src.Repositories;
 using teste_tecnico_api.src.Services;
+using teste_tecnico_api.src.Services.Validations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -10,6 +11,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddScoped<BillToPayService>();
 builder.Services.AddScoped<IBillToPayRepository, BillToPayRepository>();
+builder.Services.AddScoped<IBillToPayValidator, BillToPayValidator>();
 
 // CORS
 var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
