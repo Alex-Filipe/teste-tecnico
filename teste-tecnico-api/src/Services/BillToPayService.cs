@@ -9,7 +9,7 @@ namespace teste_tecnico_api.src.Services
     {
         private readonly IBillToPayRepository _billToPayRepository = billToPayRepository;
 
-        public List<AllUserDto> GetAllBillsToPay()
+        public List<AllBillToPayDto> GetAllBillsToPay()
         {
             try
             {
@@ -28,7 +28,7 @@ namespace teste_tecnico_api.src.Services
                 ValidateBillToPay(billToPay);
 
                 var diasAtraso = CalculateDaysLate(billToPay.DataPagamento?.ToDateTime(TimeOnly.MinValue) ?? DateTime.MinValue, billToPay.DataVencimento?.ToDateTime(TimeOnly.MinValue) ?? DateTime.MinValue);
-                
+
                 var (multa, juros) = CalculatePenaltyAndInterest(diasAtraso);
 
                 var valorCorrigido = billToPay.ValorOriginal + (billToPay.ValorOriginal * multa) + (billToPay.ValorOriginal * juros);
@@ -51,48 +51,73 @@ namespace teste_tecnico_api.src.Services
             }
         }
 
-        private void ValidateBillToPay(CreateBillToPayDto billToPay)
+        public void ValidateBillToPay(CreateBillToPayDto billToPay)
         {
-            if (!billToPay.DataPagamento.HasValue || !billToPay.DataVencimento.HasValue)
+            try
             {
-                throw new ArgumentException("A data de pagamento e/ou vencimento não pode ser nula.");
+                if (!billToPay.DataPagamento.HasValue || !billToPay.DataVencimento.HasValue)
+                {
+                    throw new Exception("A data de pagamento e/ou vencimento não pode ser nula.");
+                }
+
+                var existingBill = _billToPayRepository.GetBillToPayByPaymentDate(billToPay.DataPagamento.Value);
+                if (existingBill != null)
+                {
+                    throw new Exception("Já existe uma fatura com a mesma data de pagamento.");
+                }
+            }
+            catch (Exception ex)
+            {
+
+                throw new Exception(ex.Message);
             }
 
-            var existingBill = _billToPayRepository.GetBillToPayByPaymentDate(billToPay.DataPagamento.Value);
-            if (existingBill != null)
+        }
+
+        public static int CalculateDaysLate(DateTime dataPagamento, DateTime dataVencimento)
+        {
+            try
             {
-                throw new InvalidOperationException("Já existe uma fatura com a mesma data de pagamento.");
+                return (dataPagamento - dataVencimento).Days;
+            }
+            catch (Exception ex)
+            {
+
+                throw new Exception(ex.Message);
             }
         }
 
-        private static int CalculateDaysLate(DateTime dataPagamento, DateTime dataVencimento)
+        public static (float multa, float juros) CalculatePenaltyAndInterest(int diasAtraso)
         {
-            return (dataPagamento - dataVencimento).Days;
-        }
-
-        private static (float multa, float juros) CalculatePenaltyAndInterest(int diasAtraso)
-        {
-            const float MULTA_ATRASO_ATE_3_DIAS = 0.02f;
-            const float MULTA_ATRASO_ATE_10_DIAS = 0.03f;
-            const float MULTA_ATRASO_ACIMA_10_DIAS = 0.05f;
-
-            const float JUROS_ATRASO_ATE_3_DIAS = 0.001f;
-            const float JUROS_ATRASO_ATE_10_DIAS = 0.002f;
-            const float JUROS_ATRASO_ACIMA_10_DIAS = 0.003f;
-
-            if (diasAtraso <= 0) return (0, 0);
-
-            if (diasAtraso <= 3)
+            try
             {
-                return (MULTA_ATRASO_ATE_3_DIAS, JUROS_ATRASO_ATE_3_DIAS * diasAtraso);
+                const float MULTA_ATRASO_ATE_3_DIAS = 0.02f;
+                const float MULTA_ATRASO_ATE_10_DIAS = 0.03f;
+                const float MULTA_ATRASO_ACIMA_10_DIAS = 0.05f;
+
+                const float JUROS_ATRASO_ATE_3_DIAS = 0.001f;
+                const float JUROS_ATRASO_ATE_10_DIAS = 0.002f;
+                const float JUROS_ATRASO_ACIMA_10_DIAS = 0.003f;
+
+                if (diasAtraso <= 0) return (0, 0);
+
+                if (diasAtraso <= 3)
+                {
+                    return (MULTA_ATRASO_ATE_3_DIAS, JUROS_ATRASO_ATE_3_DIAS * diasAtraso);
+                }
+                else if (diasAtraso <= 10)
+                {
+                    return (MULTA_ATRASO_ATE_10_DIAS, JUROS_ATRASO_ATE_10_DIAS * diasAtraso);
+                }
+                else
+                {
+                    return (MULTA_ATRASO_ACIMA_10_DIAS, JUROS_ATRASO_ACIMA_10_DIAS * diasAtraso);
+                }
             }
-            else if (diasAtraso <= 10)
+            catch (Exception ex)
             {
-                return (MULTA_ATRASO_ATE_10_DIAS, JUROS_ATRASO_ATE_10_DIAS * diasAtraso);
-            }
-            else
-            {
-                return (MULTA_ATRASO_ACIMA_10_DIAS, JUROS_ATRASO_ACIMA_10_DIAS * diasAtraso);
+
+                throw new Exception(ex.Message);
             }
         }
     }

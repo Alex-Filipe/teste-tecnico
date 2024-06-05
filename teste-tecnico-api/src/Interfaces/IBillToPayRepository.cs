@@ -5,7 +5,7 @@ namespace teste_tecnico_api.src.Interfaces
 {
     public interface IBillToPayRepository
     {
-        List<AllUserDto> GetAllBillsToPay();
+        List<AllBillToPayDto> GetAllBillsToPay();
 
         void CreateBillToPay(BillToPay newBillToPay);
 

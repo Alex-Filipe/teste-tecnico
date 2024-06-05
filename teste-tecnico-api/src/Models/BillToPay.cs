@@ -15,10 +15,10 @@ namespace teste_tecnico_api.src.Models
         public required string? Nome { get; set; }
 
         [Column("original_value")]
-        public required float? ValorOriginal { get; set; }
+        public required double? ValorOriginal { get; set; }
 
         [Column("corrected_value")]
-        public required float? ValorCorrigido { get; set; }
+        public required double? ValorCorrigido { get; set; }
 
         [Column("number_days_late")]
         public required int? QuantidadeDiasAtraso { get; set; }

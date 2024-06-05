@@ -8,7 +8,7 @@ namespace teste_tecnico_api.src.Dtos
         public required string? Nome { get; set; }
 
         [Required(ErrorMessage = "O campo Valor Original é obrigatório.")]
-        public required float? ValorOriginal { get; set; }
+        public required double? ValorOriginal { get; set; }
 
         [Required(ErrorMessage = "O campo Data Vencimento é obrigatório.")]
         public required DateOnly? DataVencimento { get; set; }

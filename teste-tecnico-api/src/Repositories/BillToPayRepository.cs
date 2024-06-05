@@ -11,19 +11,18 @@ namespace teste_tecnico_api.src.Repositories
     {
         private readonly ApplicationDbContext _context = context;
 
-        public List<AllUserDto> GetAllBillsToPay()
+        public List<AllBillToPayDto> GetAllBillsToPay()
         {
             return [.. _context.BillsToPay
                            .Select(
-                                 (billToPay) => new AllUserDto
+                                 (billToPay) => new AllBillToPayDto
                                  {
                                      Nome = billToPay.Nome,
                                      ValorOriginal = billToPay.ValorOriginal,
                                      ValorCorrigido = billToPay.ValorCorrigido,
                                      QuantidadeDiasAtraso = billToPay.QuantidadeDiasAtraso,
                                      DataPagamento = billToPay.DataPagamento
-                                 })
-                           .OrderBy(u => u.Nome)];
+                                 })];
         }
 
         public void CreateBillToPay(BillToPay newBillToPay)
