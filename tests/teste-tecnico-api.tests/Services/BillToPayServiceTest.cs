@@ -1,158 +1,112 @@
 using Xunit;
-using Moq; // Se você estiver usando Mocks
+using Moq;
 using teste_tecnico_api.src.Dtos;
 using teste_tecnico_api.src.Interfaces;
 using teste_tecnico_api.src.Services;
 using teste_tecnico_api.src.Models;
+using teste_tecnico_api.src.Services.Validations;
 
 namespace teste_tecnico_api.tests.Services
 {
     public class BillToPayServiceTest
     {
-        private readonly BillToPayService _service;
         private readonly Mock<IBillToPayRepository> _mockRepository;
-        private readonly List<AllBillToPayDto> _allBillToPayDto;
+        private readonly Mock<IBillToPayValidator> _mockValidator;
+        private readonly BillToPayService _service;
 
         public BillToPayServiceTest()
         {
             _mockRepository = new Mock<IBillToPayRepository>();
-            _service = new BillToPayService(_mockRepository.Object);
-            _allBillToPayDto = [];
+            _mockValidator = new Mock<IBillToPayValidator>();
+            _service = new BillToPayService(_mockRepository.Object, _mockValidator.Object);
         }
 
         [Fact]
-        public void TestGetAllBillsToPayReturnsListOfAllBillToPayDto()
+        public void GetAllBillsToPayShouldReturnAllBillsToPay()
         {
             // Arrange
-            _mockRepository.Setup(repo => repo.GetAllBillsToPay()).Returns(_allBillToPayDto);
+            var bills = new List<AllBillToPayDto>
+        {
+            new() {
+                Nome = "Conta de Luz",
+                ValorOriginal = 100.0,
+                ValorCorrigido = 105.0,
+                QuantidadeDiasAtraso = 5,
+                DataPagamento = new DateOnly(2024, 5, 30)
+            },
+            new() {
+                Nome = "Conta de Água",
+                ValorOriginal = 50.0,
+                ValorCorrigido = 52.0,
+                QuantidadeDiasAtraso = 2,
+                DataPagamento = new DateOnly(2024, 6, 1)
+            }
+        };
+
+            _mockRepository.Setup(repo => repo.GetAllBillsToPay()).Returns(bills);
 
             // Act
             var result = _service.GetAllBillsToPay();
 
             // Assert
-            Assert.Equal(_allBillToPayDto, result);
+            Assert.Equal(bills, result);
         }
 
         [Fact]
-        public void TestCreateNewBillToPay()
+        public void CreateBillToPayShouldCallRepositoryCreateWhenValid()
         {
             // Arrange
-            var billToPayDto = new CreateBillToPayDto
+            var dto = new CreateBillToPayDto
             {
-                Nome = "Conta de Luz",
-                ValorOriginal = 100.00f,
-                DataVencimento = new DateOnly(2024, 6, 10),
-                DataPagamento = new DateOnly(2024, 6, 12)
+                Nome = "Conta de Internet",
+                ValorOriginal = 75.0,
+                DataVencimento = new DateOnly(2024, 5, 25),
+                DataPagamento = new DateOnly(2024, 5, 30)
             };
 
-            var newBillToPay = new BillToPay
-            {
-                Nome = billToPayDto.Nome,
-                ValorOriginal = billToPayDto.ValorOriginal,
-                ValorCorrigido = 102.20,
-                QuantidadeDiasAtraso = 2,
-                DataVencimento = billToPayDto.DataVencimento,
-                DataPagamento = billToPayDto.DataPagamento
-            };
-
-            _mockRepository.Setup(repo => repo.CreateBillToPay(It.IsAny<BillToPay>())).Verifiable();
+            _mockValidator.Setup(val => val.ValidatePaymentDateAndDueDate(dto));
 
             // Act
-            _service.CreateBillToPay(billToPayDto);
+            _service.CreateBillToPay(dto);
 
             // Assert
-            _mockRepository.Verify(repo => repo.CreateBillToPay(It.IsAny<BillToPay>()), Times.AtLeastOnce);
+            _mockRepository.Verify(repo => repo.CreateBillToPay(It.IsAny<BillToPay>()), Times.Once);
         }
 
-        [Fact]
-        public void TestWithValidData_ShouldNotThrowException()
+        [Theory]
+        [InlineData("2024-05-30", "2024-05-30", 0)]
+        [InlineData("2024-05-29", "2024-05-30", -1)]
+        [InlineData("2024-05-31", "2024-05-30", 1)]
+        [InlineData("2024-06-01", "2024-05-30", 2)]
+        public void CalculateDaysLateShouldReturnCorrectDaysLate(string dataPagamentoStr, string dataVencimentoStr, int expectedDaysLate)
         {
             // Arrange
-            var billToPayDto = new CreateBillToPayDto
-            {
-                Nome = "Conta de Luz",
-                ValorOriginal = 100.00f,
-                DataVencimento = new DateOnly(2024, 6, 10),
-                DataPagamento = new DateOnly(2024, 6, 12)
-            };
-
-            // Act & Assert
-            _service.ValidateBillToPay(billToPayDto);
-        }
-
-        [Fact]
-        public void TestWithNullPaymentDateShouldThrowArgumentException()
-        {
-            // Arrange
-            var billToPayDto = new CreateBillToPayDto
-            {
-                Nome = "Conta de Luz",
-                ValorOriginal = 100.00f,
-                DataVencimento = new DateOnly(2024, 6, 10),
-                DataPagamento = null
-            };
-
-            // Act & Assert
-            Assert.Throws<Exception>(() => _service.ValidateBillToPay(billToPayDto));
-        }
-
-        [Fact]
-        public void TestValidateBillToPayShouldThrowExceptionWhenPaymentDateExists()
-        {
-            // Arrange
-            var createBillToPayDto = new CreateBillToPayDto
-            {
-                Nome = "Exemplo 1",
-                ValorOriginal = 100,
-                DataVencimento = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day).AddDays(-5),
-                DataPagamento = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)
-            };
-
-            _mockRepository.Setup(repo => repo.GetBillToPayByPaymentDate(new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day))).Returns(new BillToPay
-            {
-                Nome = "Exemplo 2",
-                ValorOriginal = 100.0f,
-                ValorCorrigido = 105.0f,
-                QuantidadeDiasAtraso = 5,
-                DataVencimento = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day),
-                DataPagamento = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day)
-            });
-
-            // Act & Assert
-            var exception = Assert.Throws<Exception>(() => _service.ValidateBillToPay(createBillToPayDto));
-            Assert.Equal("Já existe uma fatura com a mesma data de pagamento.", exception.Message);
-        }
-
-        [Fact]
-        public void TestCalculateDaysLateShouldReturnCorrectDays()
-        {
-            // Arrange
-            var dataPagamento = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day);
-            var dataVencimento = new DateOnly(DateTime.Now.Year, DateTime.Now.Month, DateTime.Now.Day).AddDays(-5);
+            var dataPagamento = DateTime.Parse(dataPagamentoStr);
+            var dataVencimento = DateTime.Parse(dataVencimentoStr);
 
             // Act
-            var result = BillToPayService.CalculateDaysLate(dataPagamento.ToDateTime(TimeOnly.MinValue), dataVencimento.ToDateTime(TimeOnly.MinValue));
+            var result = _service.CalculateDaysLate(dataPagamento, dataVencimento);
 
             // Assert
-            Assert.Equal(5, result);
+            Assert.Equal(expectedDaysLate, result);
         }
 
         [Theory]
         [InlineData(0, 0, 0)]
+        [InlineData(1, 0.02f, 0.001f)]
         [InlineData(3, 0.02f, 0.003f)]
-        [InlineData(5, 0.03f, 0.01f)]
+        [InlineData(4, 0.03f, 0.008f)]
+        [InlineData(10, 0.03f, 0.02f)]
         [InlineData(11, 0.05f, 0.033f)]
-        public void TestCalculatePenaltyAndInterestShouldReturnCorrectValues(int diasAtraso, float expectedMulta, float expectedJuros)
+        public void CalculatePenaltyAndInterestShouldReturnCorrectValues(int diasAtraso, float expectedMulta, float expectedJuros)
         {
             // Act
-            var (multa, juros) = BillToPayService.CalculatePenaltyAndInterest(diasAtraso);
+            var (multa, juros) = _service.CalculatePenaltyAndInterest(diasAtraso);
 
             // Assert
             const float tolerance = 0.0001f;
-            Assert.InRange(multa, expectedMulta - tolerance, expectedMulta + tolerance);
-            Assert.InRange(juros, expectedJuros - tolerance, expectedJuros + tolerance);
+            Assert.Equal(expectedMulta, multa, tolerance);
+            Assert.Equal(expectedJuros, juros, tolerance);
         }
-
-
     }
 }
