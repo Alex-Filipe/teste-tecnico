@@ -11,6 +11,19 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddScoped<BillToPayService>();
 builder.Services.AddScoped<IBillToPayRepository, BillToPayRepository>();
 
+// CORS
+var MyAllowSpecificOrigins = "_myAllowSpecificOrigins";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(name: MyAllowSpecificOrigins,
+                      policy =>
+                      {
+                          policy.WithOrigins("http://localhost:3000","http://localhost:4200")
+                                              .AllowAnyHeader()
+                                              .AllowAnyMethod();
+                      });
+});
+
 //Database Configuration
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
 {
@@ -31,6 +44,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.UseCors(MyAllowSpecificOrigins);
 
 app.UseAuthorization();
 
