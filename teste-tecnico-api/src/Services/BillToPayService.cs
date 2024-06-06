@@ -52,7 +52,7 @@ namespace teste_tecnico_api.src.Services
             }
         }
 
-    
+
         public int CalculateDaysLate(DateTime dataPagamento, DateTime dataVencimento)
         {
             return (dataPagamento - dataVencimento).Days;
@@ -70,18 +70,15 @@ namespace teste_tecnico_api.src.Services
 
             if (diasAtraso <= 0) return (0, 0);
 
-            if (diasAtraso <= 3)
+            var (multa, jurosDiario) = diasAtraso switch
             {
-                return (MULTA_ATRASO_ATE_3_DIAS, JUROS_ATRASO_ATE_3_DIAS * diasAtraso);
-            }
-            else if (diasAtraso <= 10)
-            {
-                return (MULTA_ATRASO_ATE_10_DIAS, JUROS_ATRASO_ATE_10_DIAS * diasAtraso);
-            }
-            else
-            {
-                return (MULTA_ATRASO_ACIMA_10_DIAS, JUROS_ATRASO_ACIMA_10_DIAS * diasAtraso);
-            }
+                <= 3 => (MULTA_ATRASO_ATE_3_DIAS, JUROS_ATRASO_ATE_3_DIAS),
+                <= 10 => (MULTA_ATRASO_ATE_10_DIAS, JUROS_ATRASO_ATE_10_DIAS),
+                _ => (MULTA_ATRASO_ACIMA_10_DIAS, JUROS_ATRASO_ACIMA_10_DIAS)
+            };
+
+            float juros = jurosDiario * diasAtraso;
+            return (multa, juros);
         }
     }
 }
