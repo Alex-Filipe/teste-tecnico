@@ -5,6 +5,7 @@ using teste_tecnico_api.src.Interfaces;
 using teste_tecnico_api.src.Services;
 using teste_tecnico_api.src.Models;
 using teste_tecnico_api.src.Services.Validations;
+using System.ComponentModel.DataAnnotations;
 
 namespace teste_tecnico_api.tests.Services
 {
@@ -22,7 +23,7 @@ namespace teste_tecnico_api.tests.Services
         }
 
         [Fact]
-        public void GetAllBillsToPayShouldReturnAllBillsToPay()
+        public void TestGetAllBillsToPayShouldReturnAllBillsToPay()
         {
             // Arrange
             var bills = new List<AllBillToPayDto>
@@ -53,7 +54,7 @@ namespace teste_tecnico_api.tests.Services
         }
 
         [Fact]
-        public void CreateBillToPayShouldCallRepositoryCreateWhenValid()
+        public void TestCreateBillToPayShouldCallRepositoryCreateWhenValid()
         {
             // Arrange
             var dto = new CreateBillToPayDto
@@ -73,12 +74,34 @@ namespace teste_tecnico_api.tests.Services
             _mockRepository.Verify(repo => repo.CreateBillToPay(It.IsAny<BillToPay>()), Times.Once);
         }
 
+        [Fact]
+        public void TestCreateBillToPayShouldThrowValidationExceptionWhenDatesAreNull()
+        {
+            // Arrange
+            var dto = new CreateBillToPayDto
+            {
+                Nome = "Conta de Internet",
+                ValorOriginal = 100.0,
+                DataVencimento = null,
+                DataPagamento = null
+            };
+
+            _mockValidator.Setup(val => val.ValidatePaymentDateAndDueDate(dto))
+                .Throws(new ValidationException("A data de pagamento e/ou vencimento não pode ser nula."));
+
+            // Act & Assert
+            var exception = Assert.Throws<Exception>(() => _service.CreateBillToPay(dto));
+            Assert.Equal("Erro de validação ao criar a conta a pagar: A data de pagamento e/ou vencimento não pode ser nula.", exception.Message);
+            _mockRepository.Verify(repo => repo.CreateBillToPay(It.IsAny<BillToPay>()), Times.Never);
+        }
+
+
         [Theory]
         [InlineData("2024-05-30", "2024-05-30", 0)]
         [InlineData("2024-05-29", "2024-05-30", -1)]
         [InlineData("2024-05-31", "2024-05-30", 1)]
         [InlineData("2024-06-01", "2024-05-30", 2)]
-        public void CalculateDaysLateShouldReturnCorrectDaysLate(string dataPagamentoStr, string dataVencimentoStr, int expectedDaysLate)
+        public void TestCalculateDaysLateShouldReturnCorrectDaysLate(string dataPagamentoStr, string dataVencimentoStr, int expectedDaysLate)
         {
             // Arrange
             var dataPagamento = DateTime.Parse(dataPagamentoStr);
@@ -98,7 +121,7 @@ namespace teste_tecnico_api.tests.Services
         [InlineData(4, 0.03f, 0.008f)]
         [InlineData(10, 0.03f, 0.02f)]
         [InlineData(11, 0.05f, 0.033f)]
-        public void CalculatePenaltyAndInterestShouldReturnCorrectValues(int diasAtraso, float expectedMulta, float expectedJuros)
+        public void TestCalculatePenaltyAndInterestShouldReturnCorrectValues(int diasAtraso, float expectedMulta, float expectedJuros)
         {
             // Act
             var (multa, juros) = _service.CalculatePenaltyAndInterest(diasAtraso);
